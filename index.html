@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>城轨事业部数字化工位看板</title>
+    <!-- 引入Tailwind CSS -->
+    <link href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <!-- 引入Font Awesome -->
+    <link href="https://cdn.staticfile.org/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- 引入Noto字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- 引入Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #3B82F6;
+            --primary-dark: #2563EB;
+            --secondary: #10B981;
+            --secondary-dark: #059669;
+            --tertiary: #8B5CF6;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --info: #3B82F6;
+            --success: #10B981;
+            --dark: #1F2937;
+            --light: #F3F4F6;
+            --gray: #6B7280;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', Tahoma, Arial, Roboto, "Droid Sans", "Helvetica Neue", "Droid Sans Fallback", "Heiti SC", "Hiragino Sans GB", Simsun, sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        h1, h2, h3, h4 {
+            font-family: 'Noto Serif SC', serif;
+        }
+        
+        /* 自定义卡片样式 */
+        .dashboard-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.07), 0 4px 6px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        /* KPI指标样式 */
+        .kpi-card {
+            position: relative;
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+        
+        .kpi-card-overlay {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 40%;
+            height: 100%;
+            background-image: radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+        }
+        
+        .kpi-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            opacity: 0.2;
+            font-size: 2.5rem;
+        }
+        
+        /* 表格样式 */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .data-table th {
+            font-weight: 500;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            background-color: #f3f4f6;
+            font-family: 'Noto Serif SC', serif;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .data-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
+        .data-table tr:hover {
+            background-color: #f3f4f6;
+        }
+        
+        /* 表格容器自动滚动 */
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cdcdcd;
+            border-radius: 3px;
+        }
+        
+        /* 导航样式 */
+        .nav-item {
+            position: relative;
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary);
+            border-radius: 3px 3px 0 0;
+        }
+        
+        .nav-item:hover:not(.active) {
+            color: var(--primary-dark);
+        }
+        
+        /* 图表样式 */
+        .chart-container {
+            height: 300px;
+            width: 100%;
+            position: relative;
+        }
+        
+        /* 下拉菜单样式 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: white;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.1);
+            z-index: 1;
+            border-radius: 4px;
+        }
+        
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        
+        .dropdown-item {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            cursor: pointer;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f1f1f1;
+        }
+        
+        /* 进度条样式 */
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        /* 自动滚动动画 */
+        @keyframes autoScroll {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(calc(-100% + 300px)); }
+        }
+        
+        .auto-scroll {
+            animation: autoScroll 30s linear infinite;
+        }
+        
+        .auto-scroll:hover {
+            animation-play-state: paused;
+        }
+        
+        /* 响应式布局调整 */
+        @media (max-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- 顶部标题栏 -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-800">城轨事业部数字化<span id="current-workstation">落车</span>工位</h1>
+            
+            <div class="dropdown">
+                <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center transition-colors duration-300">
+                    <span>选择工位</span>
+                    <i class="fas fa-chevron-down ml-2"></i>
+                </button>
+                <div class="dropdown-content">
+                    <div class="dropdown-item" onclick="changeWorkstation('落车')">落车工位</div>
+                    <div class="dropdown-item" onclick="changeWorkstation('调车')">调车工位</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 导航菜单 -->
+    <nav class="bg-white shadow-sm mb-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-2 overflow-x-auto">
+                <div class="nav-item active" data-target="production">
+                    <i class="fas fa-tasks mr-2"></i>生产任务
+                </div>
+                <div class="nav-item" data-target="material">
+                    <i class="fas fa-boxes mr-2"></i>物料监控
+                </div>
+                <div class="nav-item" data-target="quality">
+                    <i class="fas fa-clipboard-check mr-2"></i>质量监控
+                </div>
+                <div class="nav-item" data-target="equipment">
+                    <i class="fas fa-tools mr-2"></i>装备监控
+                </div>
+                <div class="nav-item" data-target="efficiency">
+                    <i class="fas fa-chart-line mr-2"></i>人效监控
+                </div>
+                <div class="nav-item" data-target="safety">
+                    <i class="fas fa-hard-hat mr-2"></i>安环监控
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <!-- 生产任务页面 -->
+        <section id="production" class="dashboard-section block">
+            <!-- KPI指标卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="dashboard-card kpi-card bg-white">
+                    <div class="kpi-card-overlay"></div>
+                    <i class="fas fa-calendar-day kpi-icon text-blue-500"></i>
+                    <h3 class="text-lg font-medium text-gray-700">今日计划完成率</h3>
+                    <div class="flex items-end mt-2">
+                        <span class="text-3xl font-bold text-blue-600">90%</span>
+                        <span class="text-sm text-gray-500 ml-2 mb-1">目标: 100%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar bg-blue-500" style="width: 90%"></div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card kpi-card bg-white">
+                    <div class="kpi-card-overlay"></div>
+                    <i class="fas fa-calendar-week kpi-icon text-green-500"></i>
+                    <h3 class="text-lg font-medium text-gray-700">月度计划完成率</h3>
+                    <div class="flex items-end mt-2">
+                        <span class="text-3xl font-bold text-green-600">50%</span>
+                        <span class="text-sm text-gray-500 ml-2 mb-1">目标: 100%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar bg-green-500" style="width: 50%"></div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card kpi-card bg-white">
+                    <div class="kpi-card-overlay"></div>
+                    <i class="fas fa-calendar kpi-icon text-purple-500"></i>
+                    <h3 class="text-lg font-medium text-gray-700">年度计划完成率</h3>
+                    <div class="flex items-end mt-2">
+                        <span class="text-3xl font-bold text-purple-600">50%</span>
+                        <span class="text-sm text-gray-500 ml-2 mb-1">目标: 100%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar bg-purple-500" style="width: 50%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 今日工序任务 -->
+            <div class="dashboard-card mb-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-list-check mr-2 text-blue-500"></i>今日工序任务
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="table-container">
+                        <div class="auto-scroll-wrapper">
+                            <table class="data-table auto-scroll">
+                                <thead>
+                                    <tr>
+                                        <th class="rounded-tl-lg">项目代号</th>
+                                        <th>项目简写</th>
+                                        <th class="rounded-tr-lg">工序名称</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>00161500</td>
+                                        <td>ETS</td>
+                                        <td>落车部件安装</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00161800</td>
+                                        <td>NBML2</td>
+                                        <td>落车连接</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00162100</td>
+                                        <td>MCTR</td>
+                                        <td>落车配管</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00159300</td>
+                                        <td>DEMU2</td>
+                                        <td>落车电缆敷设</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00161700</td>
+                                        <td>NBML7</td>
+                                        <td>落车电气安装</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00162300</td>
+                                        <td>MCTR</td>
+                                        <td>落车制动安装</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00160900</td>
+                                        <td>ETS</td>
+                                        <td>落车最终检查</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 返工/返修任务 -->
+            <div class="dashboard-card mb-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-recycle mr-2 text-amber-500"></i>返工/返修任务
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="table-container">
+                        <div class="auto-scroll-wrapper">
+                            <table class="data-table auto-scroll">
+                                <thead>
+                                    <tr>
+                                        <th class="rounded-tl-lg">任务描述</th>
+                                        <th>任务类型</th>
+                                        <th class="rounded-tr-lg">执行单号</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>NBML7 项目 T01 车空调控制盘更换返工</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">返工执行单</span></td>
+                                        <td>FGFA-032-2025-003</td>
+                                    </tr>
+                                    <tr>
+                                        <td>ETS 项目 M03 车顶盖板安装补装</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">补装</span></td>
+                                        <td>FGFA-032-2025-005</td>
+                                    </tr>
+                                    <tr>
+                                        <td>DEMU2 项目 DM02 车电缆标识重新敷设</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">变更执行单</span></td>
+                                        <td>FGFA-032-2025-007</td>
+                                    </tr>
+                                    <tr>
+                                        <td>MCTR 项目 MC01 车接地线安装不合格</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">NCR</span></td>
+                                        <td>FGFA-032-2025-009</td>
+                                    </tr>
+                                    <tr>
+                                        <td>NBML2 项目 T02 车门控制器更换</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">返工执行单</span></td>
+                                        <td>FGFA-032-2025-011</td>
+                                    </tr>
+                                    <tr>
+                                        <td>ETS 项目 M01 车制动管路补装</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">补装</span></td>
+                                        <td>FGFA-032-2025-013</td>
+                                    </tr>
+                                    <tr>
+                                        <td>NBML7 项目 T03 车电缆保护管更换</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">变更执行单</span></td>
+                                        <td>FGFA-032-2025-015</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 生产异常明细 -->
+            <div class="dashboard-card mb-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>生产异常明细
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="table-container">
+                        <div class="auto-scroll-wrapper">
+                            <table class="data-table auto-scroll">
+                                <thead>
+                                    <tr>
+                                        <th class="rounded-tl-lg">指定响应人姓名</th>
+                                        <th>指定响应人组室</th>
+                                        <th>异常描述</th>
+                                        <th>发起日期</th>
+                                        <th class="rounded-tr-lg">发起人姓名</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>吴斯健</td>
+                                        <td>总成进程组</td>
+                                        <td>NBML7项目T02车厕所排污阀安装受阻，需调整管路敷设</td>
+                                        <td>2025-03-17</td>
+                                        <td>张明</td>
+                                    </tr>
+                                    <tr>
+                                        <td>李明辉</td>
+                                        <td>电气安装组</td>
+                                        <td>DEMU2项目DM03车车顶电气柜安装螺栓缺失</td>
+                                        <td>2025-03-17</td>
+                                        <td>王强</td>
+                                    </tr>
+                                    <tr>
+                                        <td>陈志远</td>
+                                        <td>制动系统组</td>
+                                        <td>ETS项目M02车制动管路接头漏气</td>
+                                        <td>2025-03-16</td>
+                                        <td>刘伟</td>
+                                    </tr>
+                                    <tr>
+                                        <td>赵建国</td>
+                                        <td>车体安装组</td>
+                                        <td>MCTR项目MC01车前端连接器型号不匹配</td>
+                                        <td>2025-03-16</td>
+                                        <td>周琳</td>
+                                    </tr>
+                                    <tr>
+                                        <td>黄小梅</td>
+                                        <td>电气安装组</td>
+                                        <td>NBML2项目T01车司机室控制台按钮功能异常</td>
+                                        <td>2025-03-15</td>
+                                        <td>杨帆</td>
+                                    </tr>
+                                    <tr>
+                                        <td>郑光明</td>
+                                        <td>总成进程组</td>
+                                        <td>ETS项目M01车转向架安装螺栓扭矩不达标</td>
+                                        <td>2025-03-15</td>
+                                        <td>孙亮</td>
+                                    </tr>
+                                    <tr>
+                                        <td>林志强</td>
+                                        <td>车体安装组</td>
+                                        <td>NBML7项目T03车车窗密封不良</td>
+                                        <td>2025-03-14</td>
+                                        <td>徐波</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Q30车辆 -->
+            <div class="dashboard-card mb-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-train mr-2 text-indigo-500"></i>Q30车辆
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="table-container" style="max-height: 200px;">
+                        <div class="auto-scroll-wrapper">
+                            <table class="data-table auto-scroll">
+                                <thead>
+                                    <tr>
+                                        <th class="rounded-tl-lg">项目代号</th>
+                                        <th>项目简写</th>
+                                        <th>计划落车日期</th>
+                                        <th class="rounded-tr-lg">车辆状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>00161500</td>
+                                        <td>ETS</td>
+                                        <td>2025-03-17</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">已完成Q30</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>00161800</td>
+                                        <td>NBML2</td>
+                                        <td>2025-03-18</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">正在Q30</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>00159300</td>
+                                        <td>DEMU2</td>
+                                        <td>2025-03-19</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">待Q30</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 质量监控页面 -->
+        <section id="quality" class="dashboard-section hidden">
+            <!-- KPI指标卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="dashboard-card kpi-card bg-white">
+                    <div class="kpi-card-overlay"></div>
+                    <i class="fas fa-chart-pie kpi-icon text-blue-500"></i>
+                    <h3 class="text-lg font-medium text-gray-700">本月KPI</h3>
+                    <div class="flex items-end mt-2">
+                        <span class="text-3xl font-bold text-blue-600">90%</span>
+                        <span class="text-sm text-gray-500 ml-2 mb-1">目标: 100%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar bg-blue-500" style="width: 90%"></div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card kpi-card bg-white">
+                    <div class="kpi-card-overlay"></div>
+                    <i class="fas fa-tasks-alt kpi-icon text-green-500"></i>
+                    <h3 class="text-lg font-medium text-gray-700">未完项完成率</h3>
+                    <div class="flex items-end mt-2">
+                        <span class="text-3xl font-bold text-green-600">90%</span>
+                        <span class="text-sm text-gray-500 ml-2 mb-1">目标: 100%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar bg-green-500" style="width: 90%"></div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card kpi-card bg-white">
+                    <div class="kpi-card-overlay"></div>
+                    <i class="fas fa-file-pen kpi-icon text-purple-500"></i>
+                    <h3 class="text-lg font-medium text-gray-700">本月设计变更完成率</h3>
+                    <div class="flex items-end mt-2">
+                        <span class="text-3xl font-bold text-purple-600">90%</span>
+                        <span class="text-sm text-gray-500 ml-2 mb-1">目标: 100%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar bg-purple-500" style="width: 90%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 工位KPI图表 -->
+            <div class="dashboard-card mb-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-chart-line mr-2 text-blue-500"></i>工位KPI
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="chart-container" id="kpi-chart">
+                        <canvas id="kpiChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 未完项 -->
+            <div class="dashboard-card mb-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-clipboard-list mr-2 text-amber-500"></i>未完项
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="table-container">
+                        <div class="auto-scroll-wrapper">
+                            <table class="data-table auto-scroll">
+                                <thead>
+                                    <tr>
+                                        <th class="rounded-tl-lg">项目代号</th>
+                                        <th>项目简写</th>
+                                        <th>工序名称</th>
+                                        <th>未完描述</th>
+                                        <th>预计完成日期</th>
+                                        <th class="rounded-tr-lg">状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>00161500</td>
+                                        <td>ETS</td>
+                                        <td>落车部件安装</td>
+                                        <td>空调管路接头密封圈缺失</td>
+                                        <td>2025-03-20</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">正在进行</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>00161800</td>
+                                        <td>NBML2</td>
+                                        <td>落车连接</td>
+                                        <td>车间连接器防水套未安装</td>
+                                        <td>2025-03-19</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">未完</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>00162100</td>
+                                        <td>MCTR</td>
+                                        <td>落车配管</td>
+                                        <td>气动管路支架螺栓缺失</td>
+                                        <td>2025-03-21</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">正在进行</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>00159300</td>
+                                        <td>DEMU2</td>
+                                        <td>落车电缆敷设</td>
+                                        <td>车顶电缆固定卡扣数量不足</td>
+                                        <td>2025-03-18</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">未完</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>00161700</td>
+                                        <td>NBML7</td>
+                                        <td>落车电气安装</td>
+                                        <td>驾驶室控制台接线标识不清</td>
+                                        <td>2025-03-22</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">正在进行</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>00162300</td>
+                                        <td>MCTR</td>
+                                        <td>落车制动安装</td>
+                                        <td>制动阀门安装位置偏移</td>
+                                        <td>2025-03-19</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">未完</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>00160900</td>
+                                        <td>ETS</td>
+                                        <td>落车最终检查</td>
+                                        <td>车底防护盖板螺栓松动</td>
+                                        <td>2025-03-20</td>
+                                        <td><span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">正在进行</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 未完变更执行任务 -->
+            <div class="dashboard-card mb-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-exchange-alt mr-2 text-indigo-500"></i>未完变更执行任务
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="table-container">
+                        <div class="auto-scroll-wrapper">
+                            <table class="data-table auto-scroll">
+                                <thead>
+                                    <tr>
+                                        <th class="rounded-tl-lg">项目代号</th>
+                                        <th>项目简写</th>
+                                        <th>变更单编码</th>
+                                        <th>变更单名称</th>
+                                        <th>车号</th>
+                                        <th class="rounded-tr-lg">节车号</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>00161500</td>
+                                        <td>ETS</td>
+                                        <td>ETS-032-BG-0124</td>
+                                        <td>司机室控制台按钮布局变更</td>
+                                        <td>1</td>
+                                        <td>MC1</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00161800</td>
+                                        <td>NBML2</td>
+                                        <td>NBML2-032-BG-0187</td>
+                                        <td>车门控制器接线方式变更</td>
+                                        <td>2</td>
+                                        <td>T01</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00159300</td>
+                                        <td>DEMU2</td>
+                                        <td>DEMU2-032-BG-0249</td>
+                                        <td>MIREL系统速传连接器软管接头变更</td>
+                                        <td>3</td>
+                                        <td>MC2</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00162100</td>
+                                        <td>MCTR</td>
+                                        <td>MCTR-032-BG-0142</td>
+                                        <td>制动管路敷设路径变更</td>
+                                        <td>1</td>
+                                        <td>DM01</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00161700</td>
+                                        <td>NBML7</td>
+                                        <td>NBML7-032-BG-0211</td>
+                                        <td>车顶电气设备固定方式变更</td>
+                                        <td>2</td>
+                                        <td>T02</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00162300</td>
+                                        <td>MCTR</td>
+                                        <td>MCTR-032-BG-0156</td>
+                                        <td>车底电缆保护套材质变更</td>
+                                        <td>3</td>
+                                        <td>MC1</td>
+                                    </tr>
+                                    <tr>
+                                        <td>00160900</td>
+                                        <td>ETS</td>
+                                        <td>ETS-032-BG-0139</td>
+                                        <td>乘客信息系统显示屏安装方式变更</td>
+                                        <td>1</td>
+                                        <td>T01</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 其他页面，简化为占位符 -->
+        <section id="material" class="dashboard-section hidden">
+            <div class="dashboard-card p-8 text-center">
+                <i class="fas fa-boxes text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-2xl font-semibold text-gray-700">物料监控</h2>
+                <p class="text-gray-500 mt-2">物料监控数据正在加载中...</p>
+            </div>
+        </section>
+        
+        <section id="equipment" class="dashboard-section hidden">
+            <div class="dashboard-card p-8 text-center">
+                <i class="fas fa-tools text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-2xl font-semibold text-gray-700">装备监控</h2>
+                <p class="text-gray-500 mt-2">装备监控数据正在加载中...</p>
+            </div>
+        </section>
+        
+        <section id="efficiency" class="dashboard-section hidden">
+            <div class="dashboard-card p-8 text-center">
+                <i class="fas fa-chart-line text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-2xl font-semibold text-gray-700">人效监控</h2>
+                <p class="text-gray-500 mt-2">人效监控数据正在加载中...</p>
+            </div>
+        </section>
+        
+        <section id="safety" class="dashboard-section hidden">
+            <div class="dashboard-card p-8 text-center">
+                <i class="fas fa-hard-hat text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-2xl font-semibold text-gray-700">安环监控</h2>
+                <p class="text-gray-500 mt-2">安环监控数据正在加载中...</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-sm">© 2025 城轨事业部数字化管理系统</p>
+                </div>
+                <div class="flex space-x-4">
+                    <span class="text-sm"><i class="fas fa-clock mr-1"></i><span id="current-time"></span></span>
+                    <span class="text-sm"><i class="fas fa-calendar-day mr-1"></i><span id="current-date"></span></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Chart.js库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // 初始化mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'neutral'
+        });
+        
+        // 导航切换功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化导航
+            const navItems = document.querySelectorAll('.nav-item');
+            const sections = document.querySelectorAll('.dashboard-section');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const target = this.getAttribute('data-target');
+                    
+                    // 更新导航项状态
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 更新内容区域
+                    sections.forEach(section => {
+                        if(section.id === target) {
+                            section.classList.remove('hidden');
+                            section.classList.add('block');
+                        } else {
+                            section.classList.add('hidden');
+                            section.classList.remove('block');
+                        }
+                    });
+                    
+                    // 如果是质量监控页面，初始化图表
+                    if(target === 'quality') {
+                        initKpiChart();
+                    }
+                });
+            });
+            
+            // 当前时间和日期
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // 初始化图表
+            initKpiChart();
+            
+            // 自动滚动表格
+            initAutoScroll();
+        });
+        
+        // 切换工位
+        function changeWorkstation(name) {
+            document.getElementById('current-workstation').textContent = name;
+        }
+        
+        // 更新时间和日期
+        function updateDateTime() {
+            const now = new Date();
+            const timeElement = document.getElementById('current-time');
+            const dateElement = document.getElementById('current-date');
+            
+            timeElement.textContent = now.toLocaleTimeString('zh-CN');
+            dateElement.textContent = now.toLocaleDateString('zh-CN');
+        }
+        
+        // 初始化KPI图表
+        function initKpiChart() {
+            const ctx = document.getElementById('kpiChart');
+            if(ctx && !ctx._chart) {
+                ctx._chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['10月', '11月', '12月', '1月', '2月', '3月'],
+                        datasets: [{
+                            label: '质量KPI得分',
+                            data: [50, 100, 77, 86, 90, 100],
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                            pointRadius: 4,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: '分数'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: '月份'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: '班组质量KPI趋势(近6个月)',
+                                font: {
+                                    size: 16
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // 初始化表格自动滚动
+        function initAutoScroll() {
+            const tableContainers = document.querySelectorAll('.table-container');
+            
+            tableContainers.forEach(container => {
+                const autoScrollTable = container.querySelector('.auto-scroll');
+                if(autoScrollTable) {
+                    const tableHeight = autoScrollTable.clientHeight;
+                    const containerHeight = container.clientHeight;
+                    
+                    if(tableHeight > containerHeight) {
+                        let scrollPosition = 0;
+                        const maxScroll = tableHeight - containerHeight;
+                        const scrollSpeed = 1;
+                        
+                        setInterval(() => {
+                            scrollPosition += scrollSpeed;
+                            if(scrollPosition > maxScroll) {
+                                scrollPosition = 0;
+                            }
+                            container.scrollTop = scrollPosition;
+                        }, 100);
+                        
+                        // 鼠标悬停时暂停滚动
+                        container.addEventListener('mouseenter', () => {
+                            container.style.overflowY = 'auto';
+                        });
+                        
+                        container.addEventListener('mouseleave', () => {
+                            container.style.overflowY = 'hidden';
+                        });
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
